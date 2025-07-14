@@ -1,34 +1,50 @@
-use actix_web::{App, HttpServer, web};
-use env_logger;
-use log::info;
-
-mod config;
-mod db;
-mod models;
 mod handlers;
+mod models;
+mod errors;
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init();
+use actix_cors::Cors;
+use actix_web::{middleware::Logger, web, App, HttpServer};
+use handlers::{auth, academic, students, sessions, evaluation};
+use shuttle_actix_web::ShuttleActixWeb;
+use sqlx::PgPool;
 
-    let config = config::Config::from_env().expect("Error loading config");
-    let pool = db::get_pool(&config)
+#[shuttle_runtime::main]
+async fn main(
+    #[shuttle_shared_db::Postgres] connection_string: String,
+) -> ShuttleActixWeb<impl FnOnce(&mut web::ServiceConfig) + Send + Clone + 'static> {
+    // Configuración especial para Shuttle
+    let conn_string = if connection_string.contains('?') {
+        format!("{}&sslmode=require", connection_string)
+    } else {
+        format!("{}?sslmode=require", connection_string)
+    };
+
+    // Crear pool de conexiones
+    let pool = PgPool::connect(&conn_string)
         .await
-        .expect("Error connecting to DB");
+        .expect("Failed to create PgPool");
+    
+    // Ejecutar migraciones
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Failed migrations");
 
-    info!("Starting server on port {}", config.port);
+    let config = move |cfg: &mut web::ServiceConfig| {
+        cfg.app_data(web::Data::new(pool.clone()))
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+            )
+            .wrap(Logger::default())
+            .configure(auth::config)
+            .configure(academic::config)
+            .configure(students::config)
+            .configure(sessions::config)
+            .configure(evaluation::config);
+    };
 
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(pool.clone()))
-            // Aquí agregas los handlers:
-            .service(handlers::alumno::get_alumnos)
-            .service(handlers::alumno::create_alumno)
-            .service(handlers::alumno::update_alumno)
-            .service(handlers::alumno::delete_alumno)
-            // Repite para los demás handlers...
-    })
-    .bind(("0.0.0.0", config.port))?
-    .run()
-    .await
+    Ok(config.into())
 }
