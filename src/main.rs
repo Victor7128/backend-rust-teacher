@@ -1,6 +1,5 @@
 use actix_web::{web::ServiceConfig};
 use shuttle_actix_web::ShuttleActixWeb;
-
 mod bd;
 
 #[shuttle_runtime::main]
