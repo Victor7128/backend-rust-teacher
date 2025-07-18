@@ -1,3 +1,12 @@
+-- Tabla de usuarios (profesores)
+CREATE TABLE usuarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    google_id VARCHAR(100) UNIQUE NOT NULL,
+    creado_en TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- Tabla de bimestres (predefinidos)
 CREATE TABLE bimestres (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,6 +31,7 @@ CREATE TABLE secciones (
     letra CHAR(1) NOT NULL,
     grado_id UUID NOT NULL REFERENCES grados(id) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
+    profesor_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (grado_id, bimestre_id, letra)  -- Sección única por grado/bimestre
 );
@@ -81,10 +91,11 @@ FOR EACH ROW
 WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_sesion();
 
--- Tabla de competencias (con orden)
+-- Tabla de competencias (con orden y descripción opcional)
 CREATE TABLE competencias (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nombre VARCHAR(100),
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT, -- opcional
     sesion_id UUID NOT NULL REFERENCES sesiones(id) ON DELETE CASCADE,
     orden SMALLINT NOT NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
@@ -110,11 +121,11 @@ FOR EACH ROW
 WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_competencia();
 
--- Tabla de criterios (con orden)
+-- Tabla de criterios (con orden y descripción opcional)
 CREATE TABLE criterios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(50) NOT NULL,
-    descripcion TEXT,
+    descripcion TEXT, -- opcional
     competencia_id UUID NOT NULL REFERENCES competencias(id) ON DELETE CASCADE,
     orden SMALLINT NOT NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
@@ -140,12 +151,13 @@ FOR EACH ROW
 WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_criterio();
 
--- Tabla de evaluaciones (con auditoría y restricción única)
+-- Tabla de evaluaciones (único usuario, auditoría y restricción única)
 CREATE TABLE evaluaciones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     estudiante_id UUID NOT NULL REFERENCES alumnos(id) ON DELETE CASCADE,
     criterio_id UUID NOT NULL REFERENCES criterios(id) ON DELETE CASCADE,
     valor CHAR(2) NOT NULL CHECK (valor IN ('AD', 'A', 'B', 'C')),
+    observacion TEXT, -- opcional
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     actualizado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (estudiante_id, criterio_id)  -- Evita evaluación duplicada
@@ -156,7 +168,7 @@ CREATE TRIGGER evaluaciones_actualizado
 BEFORE UPDATE ON evaluaciones
 FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
 
--- Tabla de auditoría para cambios críticos
+-- Tabla de auditoría para cambios críticos (sin usuario)
 CREATE TABLE auditoria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tabla_afectada VARCHAR(50) NOT NULL,
