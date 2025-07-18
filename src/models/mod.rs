@@ -1,0 +1,9 @@
+pub mod alumno;
+pub mod bimestre;
+pub mod competencia;
+pub mod criterio;
+pub mod evaluacion;
+pub mod grado;
+pub mod seccion;
+pub mod sesion;
+pub mod auditoria;

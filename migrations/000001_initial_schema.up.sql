@@ -1,12 +1,3 @@
--- Tabla de usuarios (profesores)
-CREATE TABLE usuarios (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    google_id VARCHAR(100) UNIQUE NOT NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
 -- Tabla de bimestres (predefinidos)
 CREATE TABLE bimestres (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,7 +22,6 @@ CREATE TABLE secciones (
     letra CHAR(1) NOT NULL,
     grado_id UUID NOT NULL REFERENCES grados(id) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
-    profesor_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (grado_id, bimestre_id, letra)  -- Sección única por grado/bimestre
 );
@@ -156,7 +146,6 @@ CREATE TABLE evaluaciones (
     estudiante_id UUID NOT NULL REFERENCES alumnos(id) ON DELETE CASCADE,
     criterio_id UUID NOT NULL REFERENCES criterios(id) ON DELETE CASCADE,
     valor CHAR(2) NOT NULL CHECK (valor IN ('AD', 'A', 'B', 'C')),
-    evaluado_por UUID NOT NULL REFERENCES usuarios(id) ON DELETE SET NULL,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     actualizado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (estudiante_id, criterio_id)  -- Evita evaluación duplicada
@@ -173,7 +162,6 @@ CREATE TABLE auditoria (
     tabla_afectada VARCHAR(50) NOT NULL,
     accion VARCHAR(10) NOT NULL CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE')),
     id_afectado UUID NOT NULL,
-    realizado_por UUID REFERENCES usuarios(id) ON DELETE SET NULL,
     realizado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     detalles JSONB
 );
@@ -190,8 +178,8 @@ BEGIN
         detalles_json = to_jsonb(NEW);
     END IF;
     
-    INSERT INTO auditoria (tabla_afectada, accion, id_afectado, realizado_por, detalles)
-    VALUES (TG_TABLE_NAME, TG_OP, COALESCE(OLD.id, NEW.id), current_setting('app.current_user_id', TRUE)::UUID, detalles_json);
+    INSERT INTO auditoria (tabla_afectada, accion, id_afectado, detalles)
+    VALUES (TG_TABLE_NAME, TG_OP, COALESCE(OLD.id, NEW.id), detalles_json);
     
     RETURN NEW;
 END;
