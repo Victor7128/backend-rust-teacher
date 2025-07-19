@@ -6,4 +6,5 @@ use uuid::Uuid;
 pub struct Bimestre {
     pub id: Uuid,
     pub nombre: String,
+    pub activo: bool,
 }

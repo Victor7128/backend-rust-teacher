@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS limpiar_bimestre(UUID);

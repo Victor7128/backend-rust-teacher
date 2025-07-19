@@ -1,12 +1,3 @@
--- Tabla de usuarios (profesores)
-CREATE TABLE usuarios (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    google_id VARCHAR(100) UNIQUE NOT NULL,
-    creado_en TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
 -- Tabla de bimestres (predefinidos)
 CREATE TABLE bimestres (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,7 +22,6 @@ CREATE TABLE secciones (
     letra CHAR(1) NOT NULL,
     grado_id UUID NOT NULL REFERENCES grados(id) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
-    profesor_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (grado_id, bimestre_id, letra)  -- Sección única por grado/bimestre
 );

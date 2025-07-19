@@ -1,0 +1,10 @@
+pub mod bimestres;
+pub mod grados;
+pub mod secciones;
+pub mod alumnos;
+pub mod sesiones;
+pub mod competencias;
+pub mod criterios;
+pub mod evaluaciones;
+pub mod auditoria;
+pub mod exportacion;
