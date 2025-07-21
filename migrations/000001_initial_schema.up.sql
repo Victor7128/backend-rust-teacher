@@ -13,6 +13,7 @@ INSERT INTO bimestres (nombre) VALUES
 CREATE TABLE grados (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     numero SMALLINT NOT NULL UNIQUE,
+    bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
