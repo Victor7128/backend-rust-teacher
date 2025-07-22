@@ -197,3 +197,28 @@ FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
 CREATE TRIGGER evaluaciones_auditoria
 AFTER INSERT OR UPDATE OR DELETE ON evaluaciones
 FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+SELECT
+  a.id AS alumno_id,
+  a.nombre AS alumno_nombre,
+  s.id AS seccion_id,
+  s.letra AS seccion_letra,
+  b.id AS bimestre_id,
+  b.nombre AS bimestre_nombre,
+  ses.id AS sesion_id,
+  ses.nombre AS sesion_nombre,
+  c.id AS competencia_id,
+  c.nombre AS competencia_nombre,
+  cr.id AS criterio_id,
+  cr.nombre AS criterio_nombre,
+  ev.valor AS nota,
+  ev.observacion
+FROM alumnos a
+JOIN secciones s ON a.seccion_id = s.id
+JOIN bimestres b ON s.bimestre_id = b.id
+LEFT JOIN sesiones ses ON ses.seccion_id = s.id AND ses.bimestre_id = b.id
+LEFT JOIN competencias c ON c.sesion_id = ses.id
+LEFT JOIN criterios cr ON cr.competencia_id = c.id
+LEFT JOIN evaluaciones ev ON ev.estudiante_id = a.id AND ev.criterio_id = cr.id
+WHERE s.id = $1 AND b.id = $2
+ORDER BY a.nombre, ses.orden, c.orden, cr.orden;
