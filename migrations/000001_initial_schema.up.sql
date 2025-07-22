@@ -57,8 +57,9 @@ CREATE TABLE sesiones (
     seccion_id UUID NOT NULL REFERENCES secciones(id) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
     orden SMALLINT NOT NULL,
+    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (seccion_id, bimestre_id, orden)  -- Orden único por sección/bimestre
+    UNIQUE (seccion_id, bimestre_id, orden)
 );
 
 -- Función para nombre automático de sesiones
