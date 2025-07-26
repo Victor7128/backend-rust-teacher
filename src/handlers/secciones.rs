@@ -7,7 +7,7 @@ use crate::models::seccion::Seccion;
 pub async fn listar_secciones(pool: web::Data<PgPool>) -> impl Responder {
     let secciones = sqlx::query_as!(
         Seccion,
-        r#"SELECT id, letra, grado_id, bimestre_id, creado_en FROM secciones ORDER BY letra"#
+        r#"SELECT id, letra, grado_numero, bimestre_id, creado_en FROM secciones ORDER BY letra"#
     )
     .fetch_all(pool.get_ref())
     .await;
@@ -24,7 +24,7 @@ pub async fn listar_secciones(pool: web::Data<PgPool>) -> impl Responder {
 #[derive(Debug, serde::Deserialize)]
 pub struct NuevaSeccion {
     pub letra: String,
-    pub grado_id: Uuid,
+    pub grado_numero: i16,  // Cambiado de grado_id a grado_numero
     pub bimestre_id: Uuid,
 }
 
@@ -34,9 +34,11 @@ pub async fn crear_seccion(
     datos: web::Json<NuevaSeccion>
 ) -> impl Responder {
     let resultado = sqlx::query!(
-        "INSERT INTO secciones (id, letra, grado_id, bimestre_id) VALUES (gen_random_uuid(), $1, $2, $3) RETURNING id, letra, grado_id, bimestre_id, creado_en",
+        "INSERT INTO secciones (id, letra, grado_numero, bimestre_id) 
+        VALUES (gen_random_uuid(), $1, $2, $3) 
+        RETURNING id, letra, grado_numero, bimestre_id, creado_en",
         datos.letra,
-        datos.grado_id,
+        datos.grado_numero,
         datos.bimestre_id
     )
     .fetch_one(pool.get_ref())
@@ -46,7 +48,7 @@ pub async fn crear_seccion(
         Ok(registro) => HttpResponse::Created().json(Seccion {
             id: registro.id,
             letra: registro.letra,
-            grado_id: registro.grado_id,
+            grado_numero: registro.grado_numero,
             bimestre_id: registro.bimestre_id,
             creado_en: registro.creado_en,
         }),
@@ -60,7 +62,7 @@ pub async fn crear_seccion(
 #[derive(Debug, serde::Deserialize)]
 pub struct EditarSeccion {
     pub letra: String,
-    pub grado_id: Uuid,
+    pub grado_numero: i16,  // Cambiado de grado_id a grado_numero
     pub bimestre_id: Uuid,
 }
 
@@ -72,9 +74,11 @@ pub async fn editar_seccion(
 ) -> impl Responder {
     let id = path.into_inner();
     let resultado = sqlx::query!(
-        "UPDATE secciones SET letra = $1, grado_id = $2, bimestre_id = $3 WHERE id = $4 RETURNING id, letra, grado_id, bimestre_id, creado_en",
+        "UPDATE secciones SET letra = $1, grado_numero = $2, bimestre_id = $3 
+        WHERE id = $4 
+        RETURNING id, letra, grado_numero, bimestre_id, creado_en",
         datos.letra,
-        datos.grado_id,
+        datos.grado_numero,
         datos.bimestre_id,
         id
     )
@@ -85,7 +89,7 @@ pub async fn editar_seccion(
         Ok(registro) => HttpResponse::Ok().json(Seccion {
             id: registro.id,
             letra: registro.letra,
-            grado_id: registro.grado_id,
+            grado_numero: registro.grado_numero,
             bimestre_id: registro.bimestre_id,
             creado_en: registro.creado_en,
         }),

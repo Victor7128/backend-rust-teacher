@@ -7,7 +7,8 @@ use crate::models::evaluacion::Evaluacion;
 pub async fn listar_evaluaciones(pool: web::Data<PgPool>) -> impl Responder {
     let evaluaciones = sqlx::query_as!(
         Evaluacion,
-        r#"SELECT id, estudiante_id, criterio_id, valor, observacion, creado_en, actualizado_en FROM evaluaciones ORDER BY creado_en DESC"#
+        r#"SELECT id, estudiante_id, criterio_id, calificacion, observacion, creado_en, actualizado_en 
+        FROM evaluaciones ORDER BY creado_en DESC"#  // Cambiado valor por calificacion
     )
     .fetch_all(pool.get_ref())
     .await;
@@ -25,7 +26,7 @@ pub async fn listar_evaluaciones(pool: web::Data<PgPool>) -> impl Responder {
 pub struct NuevaEvaluacion {
     pub estudiante_id: Uuid,
     pub criterio_id: Uuid,
-    pub valor: String, // Validar que sea 'AD', 'A', 'B' o 'C'
+    pub calificacion: String,  // Cambiado de valor a calificacion
     pub observacion: Option<String>,
 }
 
@@ -34,17 +35,19 @@ pub async fn crear_evaluacion(
     pool: web::Data<PgPool>,
     datos: web::Json<NuevaEvaluacion>
 ) -> impl Responder {
-    // Validación de valor permitido
-    let valor = datos.valor.as_str();
-    if !["AD", "A", "B", "C"].contains(&valor) {
-        return HttpResponse::BadRequest().body("Valor no permitido");
+    // Validación de calificacion permitida
+    let calificacion = datos.calificacion.as_str();
+    if !["AD", "A", "B", "C"].contains(&calificacion) {
+        return HttpResponse::BadRequest().body("Calificación no permitida");
     }
 
     let resultado = sqlx::query!(
-        "INSERT INTO evaluaciones (id, estudiante_id, criterio_id, valor, observacion) VALUES (gen_random_uuid(), $1, $2, $3, $4) RETURNING id, estudiante_id, criterio_id, valor, observacion, creado_en, actualizado_en",
+        "INSERT INTO evaluaciones (id, estudiante_id, criterio_id, calificacion, observacion) 
+        VALUES (gen_random_uuid(), $1, $2, $3, $4) 
+        RETURNING id, estudiante_id, criterio_id, calificacion, observacion, creado_en, actualizado_en",
         datos.estudiante_id,
         datos.criterio_id,
-        valor,
+        calificacion,
         datos.observacion
     )
     .fetch_one(pool.get_ref())
@@ -55,7 +58,7 @@ pub async fn crear_evaluacion(
             id: registro.id,
             estudiante_id: registro.estudiante_id,
             criterio_id: registro.criterio_id,
-            valor: registro.valor,
+            calificacion: registro.calificacion,  // Cambiado de valor a calificacion
             observacion: registro.observacion,
             creado_en: registro.creado_en,
             actualizado_en: registro.actualizado_en,
@@ -69,7 +72,7 @@ pub async fn crear_evaluacion(
 
 #[derive(Debug, serde::Deserialize)]
 pub struct EditarEvaluacion {
-    pub valor: String,
+    pub calificacion: String,  // Cambiado de valor a calificacion
     pub observacion: Option<String>,
 }
 
@@ -80,15 +83,17 @@ pub async fn editar_evaluacion(
     datos: web::Json<EditarEvaluacion>
 ) -> impl Responder {
     let id = path.into_inner();
-    // Validación de valor permitido
-    let valor = datos.valor.as_str();
-    if !["AD", "A", "B", "C"].contains(&valor) {
-        return HttpResponse::BadRequest().body("Valor no permitido");
+    // Validación de calificacion permitida
+    let calificacion = datos.calificacion.as_str();
+    if !["AD", "A", "B", "C"].contains(&calificacion) {
+        return HttpResponse::BadRequest().body("Calificación no permitida");
     }
 
     let resultado = sqlx::query!(
-        "UPDATE evaluaciones SET valor = $1, observacion = $2 WHERE id = $3 RETURNING id, estudiante_id, criterio_id, valor, observacion, creado_en, actualizado_en",
-        valor,
+        "UPDATE evaluaciones SET calificacion = $1, observacion = $2 
+        WHERE id = $3 
+        RETURNING id, estudiante_id, criterio_id, calificacion, observacion, creado_en, actualizado_en",
+        calificacion,
         datos.observacion,
         id
     )
@@ -100,7 +105,7 @@ pub async fn editar_evaluacion(
             id: registro.id,
             estudiante_id: registro.estudiante_id,
             criterio_id: registro.criterio_id,
-            valor: registro.valor,
+            calificacion: registro.calificacion,  // Cambiado de valor a calificacion
             observacion: registro.observacion,
             creado_en: registro.creado_en,
             actualizado_en: registro.actualizado_en,

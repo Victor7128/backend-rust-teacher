@@ -59,6 +59,7 @@ pub async fn limpiar_bimestre(
 ) -> impl Responder {
     let bimestre_id = path.into_inner();
 
+    // Ejecutar función de limpieza (sin cambios)
     let resultado = sqlx::query!(
         "SELECT limpiar_bimestre($1)",
         bimestre_id

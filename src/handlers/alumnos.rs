@@ -24,7 +24,7 @@ pub async fn listar_alumnos(pool: web::Data<PgPool>) -> impl Responder {
 #[derive(Debug, serde::Deserialize)]
 pub struct NuevoAlumno {
     pub nombre: String,
-    pub seccion_id: Uuid,
+    pub seccion_id: Option<Uuid>,  // Ahora es opcional
 }
 
 #[post("/alumnos")]
@@ -33,7 +33,9 @@ pub async fn crear_alumno(
     datos: web::Json<NuevoAlumno>
 ) -> impl Responder {
     let resultado = sqlx::query!(
-        "INSERT INTO alumnos (id, nombre, seccion_id) VALUES (gen_random_uuid(), $1, $2) RETURNING id, nombre, seccion_id, creado_en, actualizado_en",
+        "INSERT INTO alumnos (id, nombre, seccion_id) 
+        VALUES (gen_random_uuid(), $1, $2) 
+        RETURNING id, nombre, seccion_id, creado_en, actualizado_en",
         datos.nombre,
         datos.seccion_id
     )
@@ -58,7 +60,7 @@ pub async fn crear_alumno(
 #[derive(Debug, serde::Deserialize)]
 pub struct EditarAlumno {
     pub nombre: String,
-    pub seccion_id: Uuid,
+    pub seccion_id: Option<Uuid>,  // Ahora es opcional
 }
 
 #[put("/alumnos/{id}")]
@@ -69,7 +71,9 @@ pub async fn editar_alumno(
 ) -> impl Responder {
     let id = path.into_inner();
     let resultado = sqlx::query!(
-        "UPDATE alumnos SET nombre = $1, seccion_id = $2 WHERE id = $3 RETURNING id, nombre, seccion_id, creado_en, actualizado_en",
+        "UPDATE alumnos SET nombre = $1, seccion_id = $2 
+        WHERE id = $3 
+        RETURNING id, nombre, seccion_id, creado_en, actualizado_en",
         datos.nombre,
         datos.seccion_id,
         id

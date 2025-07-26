@@ -11,25 +11,28 @@ pub async fn exportar_notas_excel(
 ) -> impl Responder {
     let (seccion_id, bimestre_id) = path.into_inner();
 
-    // Consulta SQL
+    // Consulta SQL ACTUALIZADA con nuevas relaciones y campos
     let filas = sqlx::query_as!(
         FilaExportacion,
         r#"
         SELECT
-          a.id as alumno_id,
-          a.nombre as alumno_nombre,
-          s.id as seccion_id,
-          s.letra as seccion_letra,
-          b.id as bimestre_id,
-          b.nombre as bimestre_nombre,
-          ses.id as sesion_id,
-          ses.nombre as sesion_nombre,
-          c.id as competencia_id,
-          c.nombre as competencia_nombre,
-          cr.id as criterio_id,
-          cr.nombre as criterio_nombre,
-          ev.valor as nota,
-          ev.observacion as observacion
+          a.id AS alumno_id,
+          a.nombre AS alumno_nombre,
+          s.id AS seccion_id,
+          s.letra AS seccion_letra,
+          b.id AS bimestre_id,
+          b.nombre AS bimestre_nombre,
+          ses.id AS sesion_id,
+          ses.nombre AS sesion_nombre,
+          ses.orden AS sesion_orden,  -- Nuevo campo
+          c.id AS competencia_id,
+          c.nombre AS competencia_nombre,
+          c.orden AS competencia_orden,  -- Nuevo campo
+          cr.id AS criterio_id,
+          cr.nombre AS criterio_nombre,
+          cr.orden AS criterio_orden,  -- Nuevo campo
+          ev.calificacion AS nota,  -- Cambiado de valor a calificacion
+          ev.observacion
         FROM alumnos a
         JOIN secciones s ON a.seccion_id = s.id
         JOIN bimestres b ON s.bimestre_id = b.id
@@ -54,10 +57,10 @@ pub async fn exportar_notas_excel(
         }
     };
 
-    // Crear el Excel
+    // Crear el Excel (sin cambios)
     let mut workbook = Workbook::new();
     let worksheet = workbook.new_sheet("Notas").unwrap();
-
+    
     // Agregar encabezados
     worksheet.append_row(vec![
         "Alumno", "Sección", "Bimestre", "Sesión", "Competencia", "Criterio", "Nota", "Observación"
