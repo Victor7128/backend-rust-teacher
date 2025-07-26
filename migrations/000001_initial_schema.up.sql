@@ -9,22 +9,20 @@ CREATE TABLE bimestres (
 INSERT INTO bimestres (nombre) VALUES 
 ('I'), ('II'), ('III'), ('IV');
 
--- Tabla de grados
+-- Tabla de grados (INDEPENDIENTE de bimestres)
 CREATE TABLE grados (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    numero SMALLINT NOT NULL UNIQUE,
-    bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
+    numero SMALLINT PRIMARY KEY,  -- Clave primaria natural
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Tabla de secciones (con relación a bimestre)
+-- Tabla de secciones (con relación CORREGIDA)
 CREATE TABLE secciones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     letra CHAR(1) NOT NULL,
-    grado_id UUID NOT NULL REFERENCES grados(id) ON DELETE CASCADE,
+    grado_numero SMALLINT NOT NULL REFERENCES grados(numero) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (grado_id, bimestre_id, letra)  -- Sección única por grado/bimestre
+    UNIQUE (grado_numero, bimestre_id, letra)  -- Sección única por grado/bimestre
 );
 
 -- Tabla de alumnos (con auditoría)
@@ -50,28 +48,28 @@ CREATE TRIGGER alumnos_actualizado
 BEFORE UPDATE ON alumnos
 FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
 
+-- SECUENCIAS para nombres automáticos (EVITAN problemas de concurrencia)
+CREATE SEQUENCE sesion_orden_seq;
+CREATE SEQUENCE competencia_orden_seq;
+CREATE SEQUENCE criterio_orden_seq;
+
 -- Tabla de sesiones (con orden y bimestre)
 CREATE TABLE sesiones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(50) NOT NULL,
     seccion_id UUID NOT NULL REFERENCES secciones(id) ON DELETE CASCADE,
     bimestre_id UUID NOT NULL REFERENCES bimestres(id) ON DELETE CASCADE,
-    orden SMALLINT NOT NULL,
+    orden SMALLINT NOT NULL DEFAULT nextval('sesion_orden_seq'),
     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (seccion_id, bimestre_id, orden)
 );
 
--- Función para nombre automático de sesiones
+-- Función para nombre automático de sesiones (SEGURO para concurrencia)
 CREATE OR REPLACE FUNCTION generar_nombre_sesion()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.nombre = 'Sesión ' || (
-        SELECT COALESCE(MAX(orden), 0) + 1 
-        FROM sesiones 
-        WHERE seccion_id = NEW.seccion_id 
-        AND bimestre_id = NEW.bimestre_id
-    )::TEXT;
+    NEW.nombre = 'Sesión ' || NEW.orden::TEXT;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -80,16 +78,15 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_nombre_sesion
 BEFORE INSERT ON sesiones
 FOR EACH ROW
-WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_sesion();
 
 -- Tabla de competencias (con orden y descripción opcional)
 CREATE TABLE competencias (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(100) NOT NULL,
-    descripcion TEXT, -- opcional
+    descripcion TEXT,
     sesion_id UUID NOT NULL REFERENCES sesiones(id) ON DELETE CASCADE,
-    orden SMALLINT NOT NULL,
+    orden SMALLINT NOT NULL DEFAULT nextval('competencia_orden_seq'),
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -97,11 +94,7 @@ CREATE TABLE competencias (
 CREATE OR REPLACE FUNCTION generar_nombre_competencia()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.nombre = 'Competencia ' || (
-        SELECT COALESCE(MAX(orden), 0) + 1 
-        FROM competencias 
-        WHERE sesion_id = NEW.sesion_id
-    )::TEXT;
+    NEW.nombre = 'Competencia ' || NEW.orden::TEXT;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -110,16 +103,15 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_nombre_competencia
 BEFORE INSERT ON competencias
 FOR EACH ROW
-WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_competencia();
 
 -- Tabla de criterios (con orden y descripción opcional)
 CREATE TABLE criterios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(50) NOT NULL,
-    descripcion TEXT, -- opcional
+    descripcion TEXT,
     competencia_id UUID NOT NULL REFERENCES competencias(id) ON DELETE CASCADE,
-    orden SMALLINT NOT NULL,
+    orden SMALLINT NOT NULL DEFAULT nextval('criterio_orden_seq'),
     creado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -127,11 +119,7 @@ CREATE TABLE criterios (
 CREATE OR REPLACE FUNCTION generar_nombre_criterio()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.nombre = 'C' || (
-        SELECT COALESCE(MAX(orden), 0) + 1 
-        FROM criterios 
-        WHERE competencia_id = NEW.competencia_id
-    )::TEXT;
+    NEW.nombre = 'C' || NEW.orden::TEXT;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -140,19 +128,30 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_nombre_criterio
 BEFORE INSERT ON criterios
 FOR EACH ROW
-WHEN (NEW.nombre IS NULL OR NEW.nombre = '')
 EXECUTE FUNCTION generar_nombre_criterio();
 
--- Tabla de evaluaciones (único usuario, auditoría y restricción única)
+-- Tabla NORMALIZADA de calificaciones
+CREATE TABLE calificaciones (
+    codigo CHAR(2) PRIMARY KEY,
+    descripcion TEXT NOT NULL
+);
+
+INSERT INTO calificaciones (codigo, descripcion) VALUES
+('AD', 'Logro destacado'),
+('A', 'Logro esperado'),
+('B', 'En proceso'),
+('C', 'En inicio');
+
+-- Tabla de evaluaciones (con calificación normalizada)
 CREATE TABLE evaluaciones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     estudiante_id UUID NOT NULL REFERENCES alumnos(id) ON DELETE CASCADE,
     criterio_id UUID NOT NULL REFERENCES criterios(id) ON DELETE CASCADE,
-    valor CHAR(2) NOT NULL CHECK (valor IN ('AD', 'A', 'B', 'C')),
-    observacion TEXT, -- opcional
+    calificacion CHAR(2) NOT NULL REFERENCES calificaciones(codigo),
+    observacion TEXT,
     creado_en TIMESTAMP NOT NULL DEFAULT NOW(),
     actualizado_en TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (estudiante_id, criterio_id)  -- Evita evaluación duplicada
+    UNIQUE (estudiante_id, criterio_id)
 );
 
 -- Trigger para evaluaciones
@@ -160,7 +159,7 @@ CREATE TRIGGER evaluaciones_actualizado
 BEFORE UPDATE ON evaluaciones
 FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
 
--- Tabla de auditoría para cambios críticos (sin usuario)
+-- Tabla de auditoría
 CREATE TABLE auditoria (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tabla_afectada VARCHAR(50) NOT NULL,
@@ -189,7 +188,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers para auditoría en tablas críticas
+-- Triggers de auditoría para TODAS las tablas críticas
 CREATE TRIGGER alumnos_auditoria
 AFTER INSERT OR UPDATE OR DELETE ON alumnos
 FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
@@ -198,27 +197,27 @@ CREATE TRIGGER evaluaciones_auditoria
 AFTER INSERT OR UPDATE OR DELETE ON evaluaciones
 FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
 
-SELECT
-  a.id AS alumno_id,
-  a.nombre AS alumno_nombre,
-  s.id AS seccion_id,
-  s.letra AS seccion_letra,
-  b.id AS bimestre_id,
-  b.nombre AS bimestre_nombre,
-  ses.id AS sesion_id,
-  ses.nombre AS sesion_nombre,
-  c.id AS competencia_id,
-  c.nombre AS competencia_nombre,
-  cr.id AS criterio_id,
-  cr.nombre AS criterio_nombre,
-  ev.valor AS nota,
-  ev.observacion
-FROM alumnos a
-JOIN secciones s ON a.seccion_id = s.id
-JOIN bimestres b ON s.bimestre_id = b.id
-LEFT JOIN sesiones ses ON ses.seccion_id = s.id AND ses.bimestre_id = b.id
-LEFT JOIN competencias c ON c.sesion_id = ses.id
-LEFT JOIN criterios cr ON cr.competencia_id = c.id
-LEFT JOIN evaluaciones ev ON ev.estudiante_id = a.id AND ev.criterio_id = cr.id
-WHERE s.id = $1 AND b.id = $2
-ORDER BY a.nombre, ses.orden, c.orden, cr.orden;
+CREATE TRIGGER secciones_auditoria
+AFTER INSERT OR UPDATE OR DELETE ON secciones
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+CREATE TRIGGER sesiones_auditoria
+AFTER INSERT OR UPDATE OR DELETE ON sesiones
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+CREATE TRIGGER competencias_auditoria
+AFTER INSERT OR UPDATE OR DELETE ON competencias
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+CREATE TRIGGER criterios_auditoria
+AFTER INSERT OR UPDATE OR DELETE ON criterios
+FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
+
+-- ÍNDICES para mejorar rendimiento
+CREATE INDEX idx_secciones_bimestre ON secciones(bimestre_id);
+CREATE INDEX idx_sesiones_bimestre ON sesiones(bimestre_id);
+CREATE INDEX idx_sesiones_seccion ON sesiones(seccion_id);
+CREATE INDEX idx_competencias_sesion ON competencias(sesion_id);
+CREATE INDEX idx_criterios_competencia ON criterios(competencia_id);
+CREATE INDEX idx_evaluaciones_estudiante ON evaluaciones(estudiante_id);
+CREATE INDEX idx_evaluaciones_criterio ON evaluaciones(criterio_id);
