@@ -7,7 +7,7 @@ use chrono::NaiveDateTime;
 pub struct Alumno {
     pub id: Uuid,
     pub nombre: String,
-    pub seccion_id: Uuid,
+    pub seccion_id: Option<Uuid>,
     pub creado_en: NaiveDateTime,
     pub actualizado_en: NaiveDateTime,
 }

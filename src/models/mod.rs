@@ -7,3 +7,4 @@ pub mod grado;
 pub mod seccion;
 pub mod sesion;
 pub mod auditoria;
+pub mod calificacion;
