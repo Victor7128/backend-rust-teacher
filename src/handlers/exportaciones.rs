@@ -1,8 +1,7 @@
 use actix_web::{get, web, HttpResponse, Responder};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::models::exportacion::FilaExportacion;
-use umya_spreadsheet::{Workbook, Worksheet};
+use umya_spreadsheet::*;
 
 #[get("/exportar/seccion/{seccion_id}/bimestre/{bimestre_id}")]
 pub async fn exportar_notas_excel(
@@ -13,7 +12,7 @@ pub async fn exportar_notas_excel(
 
     // Consulta SQL ACTUALIZADA con nuevas relaciones y campos
     let filas = sqlx::query_as!(
-        FilaExportacion,
+        Exportacion,
         r#"
         SELECT
           a.id AS alumno_id,
@@ -58,7 +57,7 @@ pub async fn exportar_notas_excel(
     };
 
     // Crear el Excel (sin cambios)
-    let mut workbook = Workbook::new();
+    let mut workbook = new_file();
     let worksheet = workbook.new_sheet("Notas").unwrap();
     
     // Agregar encabezados
@@ -88,4 +87,11 @@ pub async fn exportar_notas_excel(
         .content_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .append_header(("Content-Disposition", "attachment; filename=notas.xlsx"))
         .body(buf)
+}
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/exportacion")
+            .service(exportar_notas_excel)
+    );
 }

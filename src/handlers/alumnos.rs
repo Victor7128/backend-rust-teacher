@@ -117,3 +117,13 @@ pub async fn eliminar_alumno(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/alumnos")
+            .service(listar_alumnos)
+            .service(crear_alumno)
+            .service(editar_alumno)
+            .service(eliminar_alumno)
+    );
+}

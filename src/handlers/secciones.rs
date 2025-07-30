@@ -121,3 +121,13 @@ pub async fn eliminar_seccion(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/secciones")
+            .service(listar_secciones)
+            .service(crear_seccion)
+            .service(editar_seccion)
+            .service(eliminar_seccion)
+    );
+}

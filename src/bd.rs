@@ -9,7 +9,7 @@ pub async fn get_pool() -> Result<PgPool, Error> {
         ).into()))?;
 
     // Configuración optimizada para uso móvil y sesiones largas
-    let mut pool = PgPoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(8)  // Balance entre recursos y disponibilidad
         .min_connections(2)  // Mantener mínimo para reconexiones rápidas
         .acquire_timeout(Duration::from_secs(60))  // 1 minuto para adquirir conexión

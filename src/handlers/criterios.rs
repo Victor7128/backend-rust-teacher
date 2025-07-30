@@ -123,3 +123,13 @@ pub async fn eliminar_criterio(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/criterios")
+            .service(listar_criterios)
+            .service(crear_criterio)
+            .service(editar_criterio)
+            .service(eliminar_criterio)
+    );
+}

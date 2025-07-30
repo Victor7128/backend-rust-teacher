@@ -1,7 +1,6 @@
-use actix_web::{get, put, web, HttpResponse, Responder};
+use actix_web::{get, put, delete, web, HttpResponse, Responder};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::models::bimestre::Bimestre;
 
 #[get("/bimestres")]
 pub async fn listar_bimestres(pool: web::Data<PgPool>) -> impl Responder {
@@ -74,4 +73,13 @@ pub async fn limpiar_bimestre(
             HttpResponse::InternalServerError().body("No se pudo limpiar el bimestre")
         }
     }
+}
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/bimestres")
+            .service(listar_bimestres)
+            .service(cambiar_estado_bimestre)
+            .service(limpiar_bimestre)
+    );
 }

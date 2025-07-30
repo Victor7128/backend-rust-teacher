@@ -104,3 +104,13 @@ pub async fn eliminar_grado(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/grados")
+            .service(listar_grados)
+            .service(crear_grado)
+            .service(editar_grado)
+            .service(eliminar_grado)
+    );
+}

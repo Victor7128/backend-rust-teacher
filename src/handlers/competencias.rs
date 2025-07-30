@@ -123,3 +123,13 @@ pub async fn eliminar_competencia(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/competencias")
+            .service(listar_competencias)
+            .service(crear_competencia)
+            .service(editar_competencia)
+            .service(eliminar_competencia)
+    );
+}

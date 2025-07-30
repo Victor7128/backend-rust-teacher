@@ -131,3 +131,13 @@ pub async fn eliminar_sesion(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/sesiones")
+            .service(listar_sesiones)
+            .service(crear_sesion)
+            .service(editar_sesion)
+            .service(eliminar_sesion)
+    );
+}

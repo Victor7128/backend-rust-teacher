@@ -138,3 +138,13 @@ pub async fn eliminar_evaluacion(
         }
     }
 }
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/evaluaciones")
+            .service(listar_evaluaciones)
+            .service(crear_evaluacion)
+            .service(editar_evaluacion)
+            .service(eliminar_evaluacion)
+    );
+}

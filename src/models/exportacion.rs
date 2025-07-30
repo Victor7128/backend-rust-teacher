@@ -2,7 +2,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
-pub struct FilaExportacion {
+pub struct Exportacion {
     pub alumno_id: Uuid,
     pub alumno_nombre: String,
     pub seccion_id: Uuid,
